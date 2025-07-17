@@ -1,0 +1,38 @@
+# dependencies
+/node_modules
+
+# production
+/dist
+/build
+
+# misc
+.DS_Store
+.env
+.env.*     # ignore all env variants (e.g., .env.local, .env.production)
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# vscode
+.vscode/
+
+# local
+*.local
+*.log
+
+# coverage (if you use testing)
+coverage/
+*.lcov
+
+# system files
+Thumbs.db
+
+# Optional: OS-generated files
+.idea/
+*.swp
+*.swo
+
+# Optional: Mac-specific
+.AppleDouble
+.LSOverride
