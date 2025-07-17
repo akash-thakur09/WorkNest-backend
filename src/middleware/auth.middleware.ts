@@ -43,7 +43,8 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     req.isManager = user.role === 'Manager';
 
     next();
-  } catch (err) {
-    return res.status(401).json({ message: 'Invalid token', error: err.message });
+  } catch (err: unknown) {
+    const error = err as Error;
+    return res.status(401).json({ message: 'Invalid token', error: error.message });
   }
 };

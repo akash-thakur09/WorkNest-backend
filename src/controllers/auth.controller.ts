@@ -16,7 +16,7 @@ export const registerEmployee = async (req: Request, res: Response) => {
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-
+// const newUser: IUser = await UserModel.create({ name, email, password });
     const newUser = await UserModel.create({
       fullName,
       email,
