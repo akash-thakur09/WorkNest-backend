@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import UserModel from '../models/User.model';
 import { generateToken } from '../utils/generateToken';
+import { join } from 'path';
 
 
 // This function registers a new employee
@@ -11,12 +12,15 @@ export const registerEmployee = async (req: Request, res: Response) => {
   try {
     const { fullName, email, password, role, joiningDate } = req.body;
 
+    if(!fullName || !email || !password || !role || !joiningDate){
+      return res.status(400).json({message:'All fields are required'});
+    }
+
     const userExists = await UserModel.findOne({ email });
     if (userExists) return res.status(400).json({ message: 'User already exists' });
 
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-// const newUser: IUser = await UserModel.create({ name, email, password });
     const newUser = await UserModel.create({
       fullName,
       email,
@@ -27,7 +31,7 @@ export const registerEmployee = async (req: Request, res: Response) => {
 
     const token = generateToken(newUser._id.toString(), newUser.role);
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'User registered successfully',
       token,
       user: {
@@ -38,7 +42,7 @@ export const registerEmployee = async (req: Request, res: Response) => {
       },
     });
   } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err });
+    return res.status(500).json({ message: 'Server error', error: err });
   }
 };
 
