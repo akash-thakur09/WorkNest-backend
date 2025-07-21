@@ -44,7 +44,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
     next();
   } catch (err: unknown) {
-    const error = err as Error;
-    return res.status(401).json({ message: 'Invalid token', error: error.message });
+    console.log('Caught error in protect middleware:', err);
+    return res.status(401).json({ message: 'Invalid token' });
   }
 };
