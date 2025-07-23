@@ -7,10 +7,11 @@ import LeaveModel from '../models/Leave.model';
 // POST /api/leave
 export const applyLeave = async (req: Request, res: Response) => {
   try {
+    const employeeId = req.params.employeeId; // from auth middleware
     const { fromDate, toDate, leaveType, reason } = req.body;
-
+    
     const newLeave = await LeaveModel.create({
-      employeeId: req.body.userId, // from auth middleware
+      employeeId: employeeId, // from auth middleware
       managerId: req.body.managerId, // assuming managerId is passed in the request body
       fromDate,
       toDate,
@@ -73,6 +74,30 @@ export const deleteLeave = async (req: Request, res: Response) => {
   }
 };
 
+// Get all leaves requested by an employee
+// GET /api/leave/getMyLeaves/:employeeId 
+export const getLeavesByEmployeeId = async (req: Request, res: Response) => {
+  try {
+    const employeeId = req.params.employeeId;
+
+    const leaves = await LeaveModel.find({ employeeId })
+      .populate('managerId', 'fullName email role')
+      .sort({ appliedAt: -1 });
+
+    if (!leaves || leaves.length === 0) {
+      return res.status(404).json({ message: 'No leave requests found for this employee.' });
+    }
+
+    res.status(200).json({
+      message: 'Leave requests fetched successfully',
+      count: leaves.length,
+      data: leaves,
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err });
+  }
+};
+
 
 // Leave controller for Manager { get all leaves requested by employees under a manager, approve or reject leave requests}
 
@@ -81,9 +106,9 @@ export const deleteLeave = async (req: Request, res: Response) => {
 export const getLeavesByManagerId = async (req: Request, res: Response) => {
   try {
     const { managerId } = req.params;
-
-    const leaves = await LeaveModel.find({ managerId });
-
+    
+    const leaves = await LeaveModel.find({ managerId: managerId });
+    
     res.status(200).json({
       message: 'Leave requests fetched',
       leaves,

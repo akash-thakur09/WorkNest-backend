@@ -15,6 +15,10 @@ export interface IUser extends Document {
     name: string;
     url: string;
   }[];
+  address?:string;
+  companyExperience?: string;
+  totalExperience?: string;
+  position?: string;
   createdAt: Date;
   updatedAt: Date;
 }

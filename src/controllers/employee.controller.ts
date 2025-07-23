@@ -3,6 +3,25 @@ import UserModel from '../models/User.model';
 import { generateToken } from '../utils/generateToken';
 import { protect } from '../middleware/auth.middleware';
 
+// This function is used to get the details of a specific employee
+export const getEmployeeDetails = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    console.log('Fetching details for employee ID:', id);
+    const user = await UserModel.findById(id).select('-passwordHash');
+    if (!user) {
+      return res.status(404).json({ message: 'Employee not found' });
+    }
+
+    return res.status(200).json({
+      message: 'Employee details retrieved successfully',
+      user,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error', error: err });
+  }
+};
+
 
 // This function updates the employee details
 // It checks if the user exists, updates the user details, and returns the updated user information

@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import AttendanceModel from '../models/Attendance.model';
+import DailyAttendanceModel from '../models/DailyAttendance.model';
+import mongoose from 'mongoose';
 import moment from 'moment';
 
 // 1️⃣ Mark Check-In
@@ -9,21 +11,43 @@ export const markCheckIn = async (req: Request, res: Response) => {
     const todayDate = moment().format('YYYY-MM-DD');
     const currentTime = moment().format('HH:mm');
 
-    const existing = await AttendanceModel.findOne({ employeeId, date: todayDate });
+    // Step 1: Check if check-in already exists for today
+    const attendanceDoc = await AttendanceModel.findOne({ employeeId }).populate('records.attendanceId');
+    const alreadyCheckedIn = attendanceDoc?.records.some((r: any) => r.date === todayDate);
 
-    if (existing) {
+    if (alreadyCheckedIn) {
       return res.status(400).json({ message: 'Check-in already marked for today.' });
     }
 
-    const attendance = await AttendanceModel.create({
-      employeeId,
+    // Step 2: Create DailyAttendance record (holds actual time/status)
+    const dailyAttendance = await DailyAttendanceModel.create({
+      employeeId: new mongoose.Types.ObjectId(employeeId),
       date: todayDate,
       checkIn: currentTime,
       status: 'Present',
     });
 
-    res.status(201).json({ message: 'Check-in recorded', data: attendance });
+    // Step 3: Link it in Attendance (or create new Attendance doc if not exists)
+    let updatedAttendance;
+    if (!attendanceDoc) {
+      updatedAttendance = await AttendanceModel.create({
+        employeeId,
+        records: [{ date: todayDate, attendanceId: dailyAttendance._id }],
+      });
+    } else {
+      attendanceDoc.records.push({
+        date: todayDate,
+        attendanceId: dailyAttendance._id,
+      });
+      updatedAttendance = await attendanceDoc.save();
+    }
+
+    res.status(201).json({
+      message: 'Check-in recorded successfully',
+      data: { attendance: updatedAttendance, dailyAttendance },
+    });
   } catch (err) {
+    console.error('Error marking check-in:', err);
     res.status(500).json({ message: 'Server error', error: err });
   }
 };
@@ -35,21 +59,47 @@ export const markCheckOut = async (req: Request, res: Response) => {
     const todayDate = moment().format('YYYY-MM-DD');
     const currentTime = moment().format('HH:mm');
 
-    const attendance = await AttendanceModel.findOne({ employeeId, date: todayDate });
+    // Step 1: Find the employee's attendance document
+    const attendanceDoc = await AttendanceModel.findOne({ employeeId });
 
-    if (!attendance) {
+    if (!attendanceDoc) {
+      return res.status(404).json({ message: 'No attendance record found for this employee.' });
+    }
+
+    // Step 2: Find today's record in the records array
+    const todayRecord = attendanceDoc.records.find((r: any) => r.date === todayDate);
+
+    if (!todayRecord) {
       return res.status(404).json({ message: 'Check-in not found for today.' });
     }
 
-    if (attendance.checkOut) {
+    // Step 3: Load the DailyAttendance document
+    const dailyAttendance = await DailyAttendanceModel.findById(todayRecord.attendanceId);
+
+    if (!dailyAttendance) {
+      return res.status(404).json({ message: 'Daily attendance record missing for today.' });
+    }
+
+    // Step 4: Prevent double check-out
+    if (dailyAttendance.checkOut) {
       return res.status(400).json({ message: 'Check-out already marked for today.' });
     }
 
-    attendance.checkOut = currentTime;
-    await attendance.save();
+    // Step 5: Update the checkOut time
+    dailyAttendance.checkOut = currentTime;
+    await dailyAttendance.save();
 
-    res.status(200).json({ message: 'Check-out recorded', data: attendance });
+    res.status(200).json({
+      message: 'Check-out recorded successfully',
+      data: {
+        date: dailyAttendance.date,
+        checkIn: dailyAttendance.checkIn,
+        checkOut: dailyAttendance.checkOut,
+        status: dailyAttendance.status,
+      },
+    });
   } catch (err) {
+    console.error('Error marking check-out:', err);
     res.status(500).json({ message: 'Server error', error: err });
   }
 };
@@ -57,11 +107,42 @@ export const markCheckOut = async (req: Request, res: Response) => {
 // 3️⃣ Get My Attendance History
 export const getMyAttendance = async (req: Request, res: Response) => {
   try {
-    const employeeId = req.body.userId;
-    const records = await AttendanceModel.find({ employeeId }).sort({ date: -1 });
+    const employeeId = req.params.id;
+    console.log('Employee ID:', employeeId);
 
-    res.status(200).json({ message: 'Attendance history', count: records.length, data: records });
+    const EmployeeAttendance = await AttendanceModel.findOne({ employeeId });
+    if (!EmployeeAttendance || !EmployeeAttendance.records || EmployeeAttendance.records.length === 0) {
+      return res.status(404).json({ message: 'No attendance records found for this employee.' });
+    }
+
+    const EmployeeRecords = await Promise.all(
+      EmployeeAttendance.records.map(async (record: any) => {
+        console.log('Processing record for attendanceId:', record.attendanceId);
+        
+        const dailyAttendance = await DailyAttendanceModel.findById(record.attendanceId);
+        if (!dailyAttendance) {
+          console.warn(`No DailyAttendance found for ID: ${record.attendanceId}`);
+          return null;
+        }
+
+        return {
+          date: dailyAttendance.date,
+          checkIn: dailyAttendance.checkIn,
+          checkOut: dailyAttendance.checkOut,
+          status: dailyAttendance.status,
+        };
+      })
+    );
+
+    const filteredRecords = EmployeeRecords.filter(Boolean);
+
+    res.status(200).json({
+      message: 'Attendance history',
+      count: filteredRecords.length,
+      data: filteredRecords,
+    });
   } catch (err) {
+    console.error('Error fetching attendance:', err);
     res.status(500).json({ message: 'Server error', error: err });
   }
 };

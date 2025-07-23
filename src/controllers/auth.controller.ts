@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import UserModel from '../models/User.model';
 import { generateToken } from '../utils/generateToken';
 import { join } from 'path';
+import { mainModule } from 'process';
 
 
 // This function registers a new employee
@@ -54,11 +55,16 @@ export const loginEmployee = async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
     const user = await UserModel.findOne({ email });
-    if (!user) return res.status(401).json({ message: 'Invalid credentials' });
+    if (!user){
+      console.error('User not found:', email);
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
     const isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch) return res.status(401).json({ message: 'Invalid credentials' });
-
+    if (!isMatch){
+      console.error('Invalid password for user:', email);
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
 
     const token = generateToken(user._id.toString(), user.role);
 
@@ -70,6 +76,7 @@ export const loginEmployee = async (req: Request, res: Response) => {
         fullName: user.fullName,
         email: user.email,
         role: user.role,
+        managerId: user.managerId,
       },
     });
   } catch (err) {
