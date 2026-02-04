@@ -1,11 +1,12 @@
+// models/Attendance.ts
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IAttendance extends Document {
   employeeId: mongoose.Types.ObjectId;
-  date: string; // e.g. "2025-07-10"
-  checkIn: string; // e.g. "09:00"
-  checkOut: string; // e.g. "17:30"
-  status: 'Present' | 'Absent' | 'Leave';
+  records: {
+    date: string; // e.g., "2025-07-10"
+    attendanceId: mongoose.Types.ObjectId; // ref to DailyAttendance
+  }[];
 }
 
 const AttendanceSchema = new Schema<IAttendance>(
@@ -15,21 +16,15 @@ const AttendanceSchema = new Schema<IAttendance>(
       ref: 'User',
       required: true,
     },
-    date: {
-      type: String,
-      required: true,
-    },
-    checkIn: {
-      type: String,
-    },
-    checkOut: {
-      type: String,
-    },
-    status: {
-      type: String,
-      enum: ['Present', 'Absent', 'Leave', 'Half Day'],
-      default: 'Present',
-    },
+    records: [
+      {
+        date: { type: String, required: true },
+        attendanceId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'DailyAttendance',
+        },
+      },
+    ],
   },
   { timestamps: true }
 );

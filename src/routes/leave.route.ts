@@ -6,6 +6,7 @@ import {
     getAllLeaveRequestsByHR,
     getLeavesByManagerId,
     approveLeaveByManager,
+    getLeavesByEmployeeId,
 } from '../controllers/leave.controller';
 import { protect } from '../middleware/auth.middleware';
 import { authorizeRoles } from '../middleware/rbac.middleware';
@@ -13,7 +14,8 @@ import { authorizeRoles } from '../middleware/rbac.middleware';
 const router = Router();
 
 // leave Routes for Employee
-router.post('/applyLeave', protect, applyLeave);
+router.post('/applyLeave/:employeeId', applyLeave);
+router.get('/getMyLeaves/:employeeId', protect, getLeavesByEmployeeId);
 router.put('/updateLeaveRequest/:id', protect, updateLeave);
 router.delete('/deleteLeaveRequest/:id', protect, deleteLeave);
 
@@ -21,8 +23,8 @@ router.delete('/deleteLeaveRequest/:id', protect, deleteLeave);
 router.get('/getAllLeaveRequests', protect, authorizeRoles('Admin', 'HR'), getAllLeaveRequestsByHR);
 
 // leave Routes for Manager
-router.get('/getLeavesByManagerId', protect, authorizeRoles('Manager'), getLeavesByManagerId);
-router.put('/approveLeaveByManager/:id', protect, authorizeRoles('Manager'), approveLeaveByManager);
+router.get('/getLeavesByManagerId/:managerId', protect, authorizeRoles('Manager'), getLeavesByManagerId);
+router.put('/approveLeaveByManager/:managerId', protect, authorizeRoles('Manager'), approveLeaveByManager);
 
 
 export default router;

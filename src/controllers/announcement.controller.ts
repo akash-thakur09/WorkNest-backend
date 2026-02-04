@@ -40,24 +40,6 @@ export const getAllAnnouncements = async (_req: Request, res: Response) => {
   }
 };
 
-// 3️⃣ Get announcements visible to the logged-in user
-export const getVisibleAnnouncements = async (req: Request, res: Response) => {
-  try {
-    const userRole = req.body.userRole; // Injected from token in protect middleware
-
-    const announcements = await AnnouncementModel.find({
-      $or: [{ visibility: 'All' }, { visibility: userRole }],
-    }).sort({ createdAt: -1 });
-
-    res.status(200).json({
-      message: 'Visible announcements for user',
-      data: announcements,
-    });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error', error: err });
-  }
-};
-
 // 4️⃣ Delete an announcement
 export const deleteAnnouncement = async (req: Request, res: Response) => {
   try {

@@ -13,7 +13,7 @@ const router = Router();
 // Attendance management routes
 router.post('/check-in', protect, markCheckIn);
 router.put('/check-out', protect, markCheckOut);
-router.get('/my-attendance', protect, getMyAttendance);
+router.get('/my-attendance/:id', getMyAttendance);
 router.get('/', protect, authorizeRoles('Admin', 'HR'), getAllAttendance);
 
 export default router;
